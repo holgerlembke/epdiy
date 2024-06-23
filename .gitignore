@@ -27,3 +27,4 @@ ES*.h
 examples/private_*/
 *.code-workspace
 gitupload.cmd
+.development
