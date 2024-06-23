@@ -32,7 +32,7 @@
             (so ABC...abc!)
        - while doing that, all function calls are collected and inserted 
          after the last #include in the main tab
-     This gives a .cpp file that is passed to the c++ compiler.      
+     This results in a .cpp file that is passed to the c++ compiler.      
 
 */
 
