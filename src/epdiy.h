@@ -259,6 +259,9 @@ void epd_poweroff();
 /** Clear the whole screen by flashing it. */
 void epd_clear();
 
+/** Converts (x,y,w,h) into a EpdRect */
+EpdRect makeEpdRect(int x, int y, int w, int h);
+
 /**
  * Clear an area by flashing it.
  *

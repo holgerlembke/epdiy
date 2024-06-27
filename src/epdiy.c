@@ -38,6 +38,17 @@ void epd_clear() {
     epd_clear_area(epd_full_screen());
 }
 
+/** Converts (x,y,w,h) into a EpdRect */
+EpdRect makeEpdRect(int x, int y, int w, int h) {
+  EpdRect r = {
+    .x = x,
+    .y = y,
+    .width = w,
+    .height = h
+  };
+  return r;
+}
+
 void epd_draw_hline(int x, int y, int length, uint8_t color, uint8_t* framebuffer) {
     for (int i = 0; i < length; i++) {
         int xx = x + i;

@@ -41,11 +41,11 @@
 //-----------------------------------------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
-  while (!Serial) { delay(100); }
-  Serial.print(F("\n\epdiy First"));
-  Serial.print(F(__DATE__));
+  do { delay(100); } while (!Serial);
+  Serial.print("\nepdiy First ");
+  Serial.print(__DATE__);
   Serial.print(" ");
-  Serial.print(F(__TIME__));
+  Serial.print(__TIME__);
   Serial.println();
 
   setupBoard();
