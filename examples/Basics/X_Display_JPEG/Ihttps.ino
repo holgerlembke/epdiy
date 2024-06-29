@@ -241,6 +241,7 @@ bool GetURLAndDisplay(String URL) {
 
                     if (sleepinbetween) {
                       //!!!!!!!!!!!!!!!!!!!!!!!
+                      Serial.println();
                       ItsBedTime(nextimage);
                     }
                   } else {
