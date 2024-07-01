@@ -45,12 +45,14 @@ void setupBoard() {
 
   // Serial.println("epaper: " + String(epdiydata.screenwidth) + " w x " + String(epdiydata.screenheight) + " h");
 
+/*
   epd_poweron();
   epd_clear();
   int temperature = epd_ambient_temperature();
   epd_poweroff();
-
-  // Serial.println("current temperature: " + String(temperature));
+*/
+  // this will clear the internal buffer to white. so we do not have to epd_clear() the screen.
+  epd_fill_rect(makeEpdRect(0,0,epdiydata.screenwidth,epdiydata.screenheight), white, epdiydata.epaperFrameBuffer);  
 }
 
 //*********************************************************************************************************************

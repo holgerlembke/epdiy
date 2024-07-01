@@ -1,5 +1,21 @@
 //*********************************************************************************************************************
-void draw7segement(uint8_t number, int pos) {
+int dxcalc(int pos, int xdelta, int padding, int dpspace) {
+  return pos * (xdelta + 2 * padding) + ((pos >= 2) ? dpspace : 0);
+}
+
+
+//*********************************************************************************************************************
+void drawSingleSegment(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3,  // f1
+                       uint16_t x4, uint16_t y4, uint16_t x5, uint16_t y5,                            // f2
+                       uint16_t x6, uint16_t y6, uint16_t x7, uint16_t y7, uint16_t x8, uint16_t y8,  // f3
+                       uint16_t color) {                                                              // color
+  epd_fill_triangle(x1, y1, x2, y2, x3, y3, color, epdiydata.epaperFrameBuffer);
+  epd_fill_rect(makeEpdRect(x4, y4, x5, y5), color, epdiydata.epaperFrameBuffer);
+  epd_fill_triangle(x6, y6, x7, y7, x8, y8, color, epdiydata.epaperFrameBuffer);
+}
+
+//*********************************************************************************************************************
+void draw7Segement(uint8_t number, int pos) {
   /*
         a
       f   b
@@ -24,17 +40,19 @@ f: xpos[7]/ypos[3] xpos[8]/ypos[4] xpos[8]/ypos[5] xpos[7]/ypos[6] xpos[9]/ypos[
 g: xpos[0]/ypos[14] xpos[1]/ypos[15] xpos[2]/ypos[15] xpos[3]/ypos[14] xpos[2]/ypos[16] xpos[1]/ypos[16]
    */
 
-  static int xpos[] = { 71, 128, 413, 469, 483, 540, 426, 57, 114, 0 };
+  static EXT_RAM_BSS_ATTR int xpos[] = { 71, 128, 413, 469, 483, 540, 426, 57, 114, 0 };
   static int ypos[] = { 56, 0, 114, 70, 127, 413, 469, 497, 553, 839, 909, 852, 966, 895, 483, 426, 540 };
   static bool isint = false;
 
   const uint8_t padding = 10;
-  float scalexy = 0.8;  // overall scaling
+  const uint8_t dpspace = 80;
   static uint8_t xofs = 0;
   static uint8_t yofs = 0;
   static uint16_t xdelta = 20;
 
   if (!isint) {
+    float scalexy = 0.8;  // overall scaling
+
     isint = true;
     int ymax = 0;
     int xmax = 0;
@@ -49,22 +67,40 @@ g: xpos[0]/ypos[14] xpos[1]/ypos[15] xpos[2]/ypos[15] xpos[3]/ypos[14] xpos[2]/y
         xmax = x;
       }
     }
-    xdelta = scalexy*((epdiydata.screenwidth) / 4) + 0.5;
+    xdelta = scalexy * ((epdiydata.screenwidth) / 4) + 0.5;
 
-    float scale = (float)(epdiydata.screenheight * scalexy - 2 * padding) / ymax;
+    float scale = (float)(epdiydata.screenheight * scalexy - 5 * padding - dpspace) / ymax;
     // tnct ends here.
+
+    // calc xmax/ymax again.
+    xmax = 0;
+    ymax = 0;
     for (int i = 0; i < sizeof(xpos) / sizeof(xpos[0]); i++) {
       xpos[i] = scalexy * scale * xpos[i] + 0.5 + padding;
+      if (xpos[i] > xmax) {
+        xmax = xpos[i];
+      }
     }
     for (int i = 0; i < sizeof(ypos) / sizeof(ypos[0]); i++) {
       ypos[i] = scalexy * scale * ypos[i] + 0.5 + padding;
+      if (ypos[i] > ymax) {
+        ymax = ypos[i];
+      }
     }
 
-    xofs = padding;
-    yofs = padding;
+    xofs = (epdiydata.screenwidth - xmax - dxcalc(3, xdelta, padding, dpspace)) / 2;
+    yofs = (epdiydata.screenheight - ymax) / 2;
+
+    // draw the :
+    const uint16_t dpofs = 40;
+    const uint16_t dpxofs = 20;
+    const uint16_t dpyofs = 20;
+    const uint16_t dpwh = 44;
+    epd_fill_rect(makeEpdRect(epdiydata.screenwidth / 2 - dpxofs, epdiydata.screenheight / 2 - dpyofs - dpofs, dpwh, dpwh), black, epdiydata.epaperFrameBuffer);
+    epd_fill_rect(makeEpdRect(epdiydata.screenwidth / 2 - dpxofs, epdiydata.screenheight / 2 - dpyofs + dpofs, dpwh, dpwh), black, epdiydata.epaperFrameBuffer);
   }
 
-  uint8_t segments[7][3][6] =  //
+  static const uint8_t segments[7][3][6] =  //
     {
       { // a
         { 0, 0, 1, 1, 1, 2 },
@@ -132,56 +168,147 @@ g: xpos[0]/ypos[14] xpos[1]/ypos[15] xpos[2]/ypos[15] xpos[3]/ypos[14] xpos[2]/y
     Serial.println();
   }
 */
-  uint16_t dx = xofs + 10;
-  uint16_t dy = yofs + 10;
+  uint16_t dx = xofs;
+  uint16_t dy = yofs;
 
   // shift for digits 0..3
-  dx = dx + pos * (xdelta + 4*padding) + ((pos == 2) ? padding : 0);
-  Serial.println(dx);
+  dx = dx + dxcalc(pos, xdelta, padding, dpspace);
+
+  static const uint8_t digit[10] = {
+    //xxBFAEDCGP
+    { 0b11111100 },
+    { 0b10000100 },
+    { 0b10111010 },
+    { 0b10101110 },
+    { 0b11000110 },
+    { 0b01101110 },
+    { 0b01111110 },
+    { 0b10100100 },
+    { 0b11111110 },
+    { 0b11101110 },
+  };
 
   // a
-  epd_fill_triangle(xpos[0] + dx, ypos[0] + yofs, xpos[1] + dx, ypos[1] + yofs, xpos[1] + dx, ypos[2] + yofs, black, epdiydata.epaperFrameBuffer);
-  epd_fill_rect(makeEpdRect(xpos[1] + dx, ypos[1] + yofs, xpos[2] - xpos[1], ypos[2] - ypos[1]), black, epdiydata.epaperFrameBuffer);
-  epd_fill_triangle(xpos[2] + dx, ypos[1] + yofs, xpos[3] + dx, ypos[0] + yofs, xpos[2] + dx, ypos[2] + yofs, black, epdiydata.epaperFrameBuffer);
-
+  uint8_t color;
+  color = ((digit[number] & 0b00100000) == 0b00100000) ? black : white;
+  drawSingleSegment(xpos[0] + dx, ypos[0] + dy, xpos[1] + dx, ypos[1] + dy, xpos[1] + dx, ypos[2] + dy,
+                    xpos[1] + dx, ypos[1] + dy, xpos[2] - xpos[1], ypos[2] - ypos[1],
+                    xpos[2] + dx, ypos[1] + dy, xpos[3] + dx, ypos[0] + dy, xpos[2] + dx, ypos[2] + dy, color);
+  /*
+  epd_fill_triangle(xpos[0] + dx, ypos[0] + dy, xpos[1] + dx, ypos[1] + dy, xpos[1] + dx, ypos[2] + dy, color, epdiydata.epaperFrameBuffer);
+  epd_fill_rect(makeEpdRect(xpos[1] + dx, ypos[1] + dy, xpos[2] - xpos[1], ypos[2] - ypos[1]), color, epdiydata.epaperFrameBuffer);
+  epd_fill_triangle(xpos[2] + dx, ypos[1] + dy, xpos[3] + dx, ypos[0] + dy, xpos[2] + dx, ypos[2] + dy, color, epdiydata.epaperFrameBuffer);
+*/
   // b
-  epd_fill_triangle(xpos[4] + dx, ypos[3] + yofs, xpos[5] + dx, ypos[4] + yofs, xpos[6] + dx, ypos[4] + yofs, black, epdiydata.epaperFrameBuffer);
-  epd_fill_rect(makeEpdRect(xpos[6] + dx, ypos[4] + yofs, xpos[5] - xpos[6], ypos[5] - ypos[4]), black, epdiydata.epaperFrameBuffer);
-  epd_fill_triangle(xpos[5] + dx, ypos[5] + yofs, xpos[4] + dx, ypos[6] + yofs, xpos[6] + dx, ypos[5] + yofs, black, epdiydata.epaperFrameBuffer);
-
+  color = ((digit[number] & 0b10000000) == 0b10000000) ? black : white;
+  drawSingleSegment(xpos[4] + dx, ypos[3] + dy, xpos[5] + dx, ypos[4] + dy, xpos[6] + dx, ypos[4] + dy,
+                    xpos[6] + dx, ypos[4] + dy, xpos[5] - xpos[6], ypos[5] - ypos[4],
+                    xpos[5] + dx, ypos[5] + dy, xpos[4] + dx, ypos[6] + dy, xpos[6] + dx, ypos[5] + dy, color);
+  /*
+  epd_fill_triangle(xpos[4] + dx, ypos[3] + dy, xpos[5] + dx, ypos[4] + dy, xpos[6] + dx, ypos[4] + dy, color, epdiydata.epaperFrameBuffer);
+  epd_fill_rect(makeEpdRect(xpos[6] + dx, ypos[4] + dy, xpos[5] - xpos[6], ypos[5] - ypos[4]), color, epdiydata.epaperFrameBuffer);
+  epd_fill_triangle(xpos[5] + dx, ypos[5] + dy, xpos[4] + dx, ypos[6] + dy, xpos[6] + dx, ypos[5] + dy, color, epdiydata.epaperFrameBuffer);
+*/
   // c
-  epd_fill_triangle(xpos[4] + dx, ypos[7] + yofs, xpos[5] + dx, ypos[8] + yofs, xpos[6] + dx, ypos[8] + yofs, black, epdiydata.epaperFrameBuffer);
-  epd_fill_rect(makeEpdRect(xpos[6] + dx, ypos[8] + yofs, xpos[5] - xpos[6], ypos[9] - ypos[8]), black, epdiydata.epaperFrameBuffer);
-  epd_fill_triangle(xpos[5] + dx, ypos[9] + yofs, xpos[4] + dx, ypos[13] + yofs, xpos[6] + dx, ypos[9] + yofs, black, epdiydata.epaperFrameBuffer);
-
+  color = ((digit[number] & 0b00000100) == 0b00000100) ? black : white;
+  drawSingleSegment(xpos[4] + dx, ypos[7] + dy, xpos[5] + dx, ypos[8] + dy, xpos[6] + dx, ypos[8] + dy,
+                    xpos[6] + dx, ypos[8] + dy, xpos[5] - xpos[6], ypos[9] - ypos[8],
+                    xpos[5] + dx, ypos[9] + dy, xpos[4] + dx, ypos[13] + dy, xpos[6] + dx, ypos[9] + dy, color);
+  /*
+  epd_fill_triangle(xpos[4] + dx, ypos[7] + dy, xpos[5] + dx, ypos[8] + dy, xpos[6] + dx, ypos[8] + dy, color, epdiydata.epaperFrameBuffer);
+  epd_fill_rect(makeEpdRect(xpos[6] + dx, ypos[8] + dy, xpos[5] - xpos[6], ypos[9] - ypos[8]), color, epdiydata.epaperFrameBuffer);
+  epd_fill_triangle(xpos[5] + dx, ypos[9] + dy, xpos[4] + dx, ypos[13] + dy, xpos[6] + dx, ypos[9] + dy, color, epdiydata.epaperFrameBuffer);
+*/
   // d
-  epd_fill_triangle(xpos[0] + dx, ypos[10] + yofs, xpos[1] + dx, ypos[11] + yofs, xpos[1] + dx, ypos[12] + yofs, black, epdiydata.epaperFrameBuffer);
-  epd_fill_rect(makeEpdRect(xpos[1] + dx, ypos[11] + yofs, xpos[2] - xpos[1], ypos[12] - ypos[11]), black, epdiydata.epaperFrameBuffer);
-  epd_fill_triangle(xpos[2] + dx, ypos[11] + yofs, xpos[3] + dx, ypos[10] + yofs, xpos[2] + dx, ypos[12] + yofs, black, epdiydata.epaperFrameBuffer);
+  color = ((digit[number] & 0b00001000) == 0b00001000) ? black : white;
+  drawSingleSegment(xpos[0] + dx, ypos[10] + dy, xpos[1] + dx, ypos[11] + dy, xpos[1] + dx, ypos[12] + dy,
+                    xpos[1] + dx, ypos[11] + dy, xpos[2] - xpos[1], ypos[12] - ypos[11],
+                    xpos[2] + dx, ypos[11] + dy, xpos[3] + dx, ypos[10] + dy, xpos[2] + dx, ypos[12] + dy, color);
+  /*
+  epd_fill_triangle(xpos[0] + dx, ypos[10] + dy, xpos[1] + dx, ypos[11] + dy, xpos[1] + dx, ypos[12] + dy, color, epdiydata.epaperFrameBuffer);
+  epd_fill_rect(makeEpdRect(xpos[1] + dx, ypos[11] + dy, xpos[2] - xpos[1], ypos[12] - ypos[11]), color, epdiydata.epaperFrameBuffer);
+  epd_fill_triangle(xpos[2] + dx, ypos[11] + dy, xpos[3] + dx, ypos[10] + dy, xpos[2] + dx, ypos[12] + dy, color, epdiydata.epaperFrameBuffer);
+*/
 
   // e
-  epd_fill_triangle(xpos[7] + dx, ypos[7] + yofs, xpos[8] + dx, ypos[8] + yofs, xpos[9] + dx, ypos[8] + yofs, black, epdiydata.epaperFrameBuffer);
-  epd_fill_rect(makeEpdRect(xpos[9] + dx, ypos[8] + yofs, xpos[8] - xpos[9], ypos[9] - ypos[8]), black, epdiydata.epaperFrameBuffer);
-  epd_fill_triangle(xpos[8] + dx, ypos[9] + yofs, xpos[7] + dx, ypos[13] + yofs, xpos[9] + dx, ypos[9] + yofs, black, epdiydata.epaperFrameBuffer);
+  color = ((digit[number] & 0b00010000) == 0b00010000) ? black : white;
+  drawSingleSegment(xpos[7] + dx, ypos[7] + dy, xpos[8] + dx, ypos[8] + dy, xpos[9] + dx, ypos[8] + dy,
+                    xpos[9] + dx, ypos[8] + dy, xpos[8] - xpos[9], ypos[9] - ypos[8],
+                    xpos[8] + dx, ypos[9] + dy, xpos[7] + dx, ypos[13] + dy, xpos[9] + dx, ypos[9] + dy, color);
+  /*
+  epd_fill_triangle(xpos[7] + dx, ypos[7] + dy, xpos[8] + dx, ypos[8] + dy, xpos[9] + dx, ypos[8] + dy, color, epdiydata.epaperFrameBuffer);
+  epd_fill_rect(makeEpdRect(xpos[9] + dx, ypos[8] + dy, xpos[8] - xpos[9], ypos[9] - ypos[8]), color, epdiydata.epaperFrameBuffer);
+  epd_fill_triangle(xpos[8] + dx, ypos[9] + dy, xpos[7] + dx, ypos[13] + dy, xpos[9] + dx, ypos[9] + dy, color, epdiydata.epaperFrameBuffer);
+*/
 
   // f
-  epd_fill_triangle(xpos[7] + dx, ypos[3] + yofs, xpos[8] + dx, ypos[4] + yofs, xpos[9] + dx, ypos[4] + yofs, black, epdiydata.epaperFrameBuffer);
-  epd_fill_rect(makeEpdRect(xpos[9] + dx, ypos[4] + yofs, xpos[8] - xpos[9], ypos[5] - ypos[4]), black, epdiydata.epaperFrameBuffer);
-  epd_fill_triangle(xpos[8] + dx, ypos[5] + yofs, xpos[7] + dx, ypos[6] + yofs, xpos[9] + dx, ypos[5] + yofs, black, epdiydata.epaperFrameBuffer);
+  color = ((digit[number] & 0b01000000) == 0b01000000) ? black : white;
+  drawSingleSegment(xpos[7] + dx, ypos[3] + dy, xpos[8] + dx, ypos[4] + dy, xpos[9] + dx, ypos[4] + dy,
+                    xpos[9] + dx, ypos[4] + dy, xpos[8] - xpos[9], ypos[5] - ypos[4],
+                    xpos[8] + dx, ypos[5] + dy, xpos[7] + dx, ypos[6] + dy, xpos[9] + dx, ypos[5] + dy, color);
+  /*
+  epd_fill_triangle(xpos[7] + dx, ypos[3] + dy, xpos[8] + dx, ypos[4] + dy, xpos[9] + dx, ypos[4] + dy, color, epdiydata.epaperFrameBuffer);
+  epd_fill_rect(makeEpdRect(xpos[9] + dx, ypos[4] + dy, xpos[8] - xpos[9], ypos[5] - ypos[4]), color, epdiydata.epaperFrameBuffer);
+  epd_fill_triangle(xpos[8] + dx, ypos[5] + dy, xpos[7] + dx, ypos[6] + dy, xpos[9] + dx, ypos[5] + dy, color, epdiydata.epaperFrameBuffer);
+*/
 
   // g
-  epd_fill_triangle(xpos[0] + dx, ypos[14] + yofs, xpos[1] + dx, ypos[15] + yofs, xpos[1] + dx, ypos[16] + yofs, black, epdiydata.epaperFrameBuffer);
-  epd_fill_rect(makeEpdRect(xpos[1] + dx, ypos[15] + yofs, xpos[2] - xpos[1], ypos[16] - ypos[15]), black, epdiydata.epaperFrameBuffer);
-  epd_fill_triangle(xpos[2] + dx, ypos[15] + yofs, xpos[3] + dx, ypos[14] + yofs, xpos[2] + dx, ypos[16] + yofs, black, epdiydata.epaperFrameBuffer);
+  color = ((digit[number] & 0b00000010) == 0b00000010) ? black : white;
+  drawSingleSegment(xpos[0] + dx, ypos[14] + dy, xpos[1] + dx, ypos[15] + dy, xpos[1] + dx, ypos[16] + dy,
+                    xpos[1] + dx, ypos[15] + dy, xpos[2] - xpos[1], ypos[16] - ypos[15],
+                    xpos[2] + dx, ypos[15] + dy, xpos[3] + dx, ypos[14] + dy, xpos[2] + dx, ypos[16] + dy, color);
+  /*
+  epd_fill_triangle(xpos[0] + dx, ypos[14] + dy, xpos[1] + dx, ypos[15] + dy, xpos[1] + dx, ypos[16] + dy, color, epdiydata.epaperFrameBuffer);
+  epd_fill_rect(makeEpdRect(xpos[1] + dx, ypos[15] + dy, xpos[2] - xpos[1], ypos[16] - ypos[15]), color, epdiydata.epaperFrameBuffer);
+  epd_fill_triangle(xpos[2] + dx, ypos[15] + dy, xpos[3] + dx, ypos[14] + dy, xpos[2] + dx, ypos[16] + dy, color, epdiydata.epaperFrameBuffer);
+*/
 }
 
 //*********************************************************************************************************************
 void drawtime() {
-  draw7segement(0, 0);
-  draw7segement(0, 1);
-  draw7segement(0, 2);
-  draw7segement(0, 3);
+  draw7Segement(rtcstunde / 10, 0);
+  draw7Segement(rtcstunde % 10, 1);
+  draw7Segement(rtcminute / 10, 2);
+  draw7Segement(rtcminute % 10, 3);
   epaperUpdateDisplay();
+}
+
+//*********************************************************************************************************************
+inline void loopDrawTime() {
+  // Wifi-Verbindung
+  static uint32_t ticker = 0;
+
+  if (millis() - ticker >= 1000) {
+    ticker = millis();
+
+    struct tm ti;
+    if (!getLocalTime(&ti)) {
+      Serial.println("No time available (yet)");
+      return;
+    }
+
+    if ((rtcstunde != ti.tm_hour) || (rtcminute != ti.tm_min)) {
+      rtcminute = ti.tm_min;
+      rtcstunde = ti.tm_hour;
+      drawtime();
+    }
+  }
+}
+
+//*********************************************************************************************************************
+void wakeuptimerhndlr() {
+  struct tm ti;
+  if (!getLocalTime(&ti)) {
+    Serial.println("No time available (yet)");
+    return;
+  }
+
+  // Tageswechsel. Wifi erzwingen
+  if (rtcday != ti.tm_mday) {
+    rtcday = ti.tm_mday;
+    return;
+  }
+  //
 }
 
 //
