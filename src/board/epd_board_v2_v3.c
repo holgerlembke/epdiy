@@ -164,6 +164,8 @@ static void epd_board_poweroff(epd_ctrl_state_t* state) {
 const EpdBoardDefinition epd_board_v2_v3 = {
     .init = epd_board_init,
     .deinit = NULL,
+    .i2c_resume = NULL,
+    .i2c_suspend = NULL,
     .set_ctrl = epd_board_set_ctrl,
     .poweron = epd_board_poweron,
     .poweroff = epd_board_poweroff,

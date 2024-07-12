@@ -174,7 +174,7 @@ g: xpos[0]/ypos[14] xpos[1]/ypos[15] xpos[2]/ypos[15] xpos[3]/ypos[14] xpos[2]/y
   // shift for digits 0..3
   dx = dx + dxcalc(pos, xdelta, padding, dpspace);
 
-  static const uint8_t digit[10] = {
+  static const uint8_t digit[11] = {
     //xxBFAEDCGP
     { 0b11111100 },
     { 0b10000100 },
@@ -186,6 +186,7 @@ g: xpos[0]/ypos[14] xpos[1]/ypos[15] xpos[2]/ypos[15] xpos[3]/ypos[14] xpos[2]/y
     { 0b10100100 },
     { 0b11111110 },
     { 0b11101110 },
+    { 0b00000000 }
   };
 
   // a
@@ -274,6 +275,22 @@ void drawtime() {
 }
 
 //*********************************************************************************************************************
+void drawtimeemptydisplay(int v) {
+  draw7Segement(v, 0);
+  draw7Segement(v, 1);
+  draw7Segement(v, 2);
+  draw7Segement(v, 3);
+}
+
+//*********************************************************************************************************************
+void sleepUntilNextMinuteChange() {
+  struct tm ti;
+  if (getLocalTime(&ti)) {
+    ItsBedTime(60 - ti.tm_sec - 1);
+  }
+}
+
+//*********************************************************************************************************************
 inline void loopDrawTime() {
   // Wifi-Verbindung
   static uint32_t ticker = 0;
@@ -283,14 +300,20 @@ inline void loopDrawTime() {
 
     struct tm ti;
     if (!getLocalTime(&ti)) {
-      Serial.println("No time available (yet)");
+      Serial.println("Time: no time available");
       return;
     }
 
     if ((rtcstunde != ti.tm_hour) || (rtcminute != ti.tm_min)) {
+      rtctag = ti.tm_mday;
       rtcminute = ti.tm_min;
       rtcstunde = ti.tm_hour;
       drawtime();
+
+      // go to sleep?
+      if ((sleepinbetween) && (gottime)) {
+        sleepUntilNextMinuteChange();
+      }
     }
   }
 }
@@ -299,16 +322,34 @@ inline void loopDrawTime() {
 void wakeuptimerhndlr() {
   struct tm ti;
   if (!getLocalTime(&ti)) {
-    Serial.println("No time available (yet)");
     return;
   }
 
   // Tageswechsel. Wifi erzwingen
-  if (rtcday != ti.tm_mday) {
-    rtcday = ti.tm_mday;
+  if (rtctag != ti.tm_mday) {
+    rtctag = ti.tm_mday;
     return;
   }
-  //
+
+  // wait until next minute
+  /** /
+  Serial.print("rtcmemory: ");
+  Serial.print(rtcstunde);
+  Serial.print(" ");
+  Serial.print(rtcminute);
+  Serial.print(" ti: ");
+  Serial.print(ti.tm_hour);
+  Serial.print(" ");
+  Serial.println(ti.tm_min);
+  /**/
+  while ((rtcminute == ti.tm_min) && (rtcstunde == ti.tm_hour)) {
+    delay(100);
+    getLocalTime(&ti);
+  }
+  rtcminute = ti.tm_min;
+  rtcstunde = ti.tm_hour;
+  drawtime();
+  sleepUntilNextMinuteChange();
 }
 
 //

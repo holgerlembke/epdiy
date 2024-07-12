@@ -507,6 +507,18 @@ void epd_deinit() {
     epd_renderer_deinit();
 }
 
+void epd_i2c_suspend() {
+    if (epd_current_board()->i2c_suspend) {
+        epd_current_board()->i2c_suspend();
+    }
+}
+
+void epd_i2c_resume() {
+    if (epd_current_board()->i2c_resume) {
+        epd_current_board()->i2c_resume();
+    }
+}
+
 float epd_ambient_temperature() {
     if (!epd_current_board()) {
         ESP_LOGE("epdiy", "Could not read temperature: board not set!");

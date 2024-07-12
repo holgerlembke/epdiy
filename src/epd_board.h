@@ -34,6 +34,8 @@ typedef struct {
      * Clean up resources and peripherals used by the board.
      */
     void (*deinit)(void);
+    void (*i2c_resume)(void);
+    void (*i2c_suspend)(void);
     /**
      * Set display line state
      */

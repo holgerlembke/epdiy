@@ -8,7 +8,7 @@
 */
 
 #include <epdiy.h>
-#include <fonts/firasans_12.h>   // font includes will be found only after the epdiy-include
+#include <fonts/firasans_12.h>  // font includes will be found only after the epdiy-include
 #include <fonts/firasans_20.h>
 
 
@@ -27,6 +27,8 @@ void setup() {
 }
 
 //-----------------------------------------------------------------------------------------------
-void loop() {}
+void loop() {
+  delay(1);
+}
 
 //

@@ -206,6 +206,9 @@ void epd_init(
     const EpdBoardDefinition* board, const EpdDisplay_t* display, enum EpdInitOptions options
 );
 
+void epd_i2c_suspend();
+void epd_i2c_resume();
+
 /**
  * Get the configured display.
  */

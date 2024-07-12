@@ -109,9 +109,7 @@ static lcd_bus_config_t lcd_config = {
     .data[15] = D15,
 };
 
-static void epd_board_init(uint32_t epd_row_width) {
-    gpio_hold_dis(CKH);  // free CKH after wakeup
-
+static void epd_board_i2c_resume() {
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = CFG_SDA;
@@ -123,6 +121,16 @@ static void epd_board_init(uint32_t epd_row_width) {
     ESP_ERROR_CHECK(i2c_param_config(EPDIY_I2C_PORT, &conf));
 
     ESP_ERROR_CHECK(i2c_driver_install(EPDIY_I2C_PORT, I2C_MODE_MASTER, 0, 0, 0));
+}
+
+static void epd_board_i2c_suspend() {
+    ESP_ERROR_CHECK(i2c_driver_delete(EPDIY_I2C_PORT));
+}
+
+static void epd_board_init(uint32_t epd_row_width) {
+    gpio_hold_dis(CKH);  // free CKH after wakeup
+
+    epd_board_i2c_resume();
 
     config_reg.port = EPDIY_I2C_PORT;
     config_reg.pwrup = false;
@@ -177,7 +185,7 @@ static void epd_board_deinit() {
     vTaskDelay(50);
     pca9555_read_input(config_reg.port, 0);
     pca9555_read_input(config_reg.port, 1);
-    i2c_driver_delete(EPDIY_I2C_PORT);
+    epd_board_i2c_suspend();
 
     gpio_uninstall_isr_service();
 }
@@ -276,6 +284,8 @@ static void set_vcom(int value) {
 const EpdBoardDefinition epd_board_v7 = {
     .init = epd_board_init,
     .deinit = epd_board_deinit,
+    .i2c_resume = epd_board_i2c_resume,
+    .i2c_suspend = epd_board_i2c_suspend,
     .set_ctrl = epd_board_set_ctrl,
     .poweron = epd_board_poweron,
     .poweroff = epd_board_poweroff,

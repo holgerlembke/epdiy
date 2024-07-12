@@ -15,7 +15,7 @@ struct epdiydata_t {
 } epdiydata;
 
 //*********************************************************************************************************************
-void setupBoard() {
+void setupBoard(bool fromwakeup) {
   epd_init(&epd_board_v7,  // board with esp32-s3
            /*
              Here goes the epaper board name as defined in src/displays.c 
@@ -43,16 +43,14 @@ void setupBoard() {
   epdiydata.screenwidth = epd_width();
   epdiydata.screenheight = epd_height();
 
-  // Serial.println("epaper: " + String(epdiydata.screenwidth) + " w x " + String(epdiydata.screenheight) + " h");
-
-/*
-  epd_poweron();
-  epd_clear();
-  int temperature = epd_ambient_temperature();
-  epd_poweroff();
-*/
-  // this will clear the internal buffer to white. so we do not have to epd_clear() the screen.
-  epd_fill_rect(makeEpdRect(0,0,epdiydata.screenwidth,epdiydata.screenheight), white, epdiydata.epaperFrameBuffer);  
+  if (fromwakeup) {
+    // restore the last image
+    drawtime();
+  } else {
+    epd_poweron();
+    epd_clear();
+    epd_poweroff();
+  }
 }
 
 //*********************************************************************************************************************
@@ -79,7 +77,5 @@ void epaperUpdateDisplay() {
 
   epd_poweroff();
 }
-
-
 
 //
