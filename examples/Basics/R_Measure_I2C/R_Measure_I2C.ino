@@ -34,10 +34,6 @@
 #include <fonts/opensans16.h>
 #include <fonts/opensans24.h>
 
-#include <bh1750.h>                         // https://github.com/UncleRus/esp-idf-lib/tree/master/components/bh1750
-#include <bmp280.h>                         // https://github.com/UncleRus/esp-idf-lib/tree/master/components/bmp280
-#include <scd4x.h>                          // https://github.com/UncleRus/esp-idf-lib/tree/master/components/sht4x
-
 #include <SolarCalculator.h>                // https://github.com/jpb10/SolarCalculator
 #include <ArduinoJson.h>                    // https://github.com/bblanchon/ArduinoJson
 #include <LinkedList.h>                     // https://github.com/ivanseidel/LinkedList
