@@ -206,7 +206,14 @@ void epd_init(
     const EpdBoardDefinition* board, const EpdDisplay_t* display, enum EpdInitOptions options
 );
 
+/**
+ * Suspends the i2c access to access the i2c-bus with Arduino Wire-style components.
+ */
 void epd_i2c_suspend();
+
+/**
+ * Resumes the i2c access. Must be called after a epd_i2c_suspend().
+ */
 void epd_i2c_resume();
 
 /**

@@ -13,12 +13,15 @@
      0x20  --> PCA9535        port extender, do not mess with P1x
      0x23  --> BH1750
      0x51  --> PCF8563T       rtc
+     0x62  --> SCD41          temp+hum+co2
      0x68  --> TPS651851RSLR  normally off, so does not show in scan
-     0x76  --> bme280
+     0x76  --> bmp280         temp+press
 
 */
 #include <FS.h>
 #include <FFat.h>
+
+#include <Wire.h>
 
 #include <privatedata.h>                    // https://github.com/holgerlembke/privatedata
 
@@ -33,6 +36,10 @@
 #include <fonts/firasans_20.h>
 #include <fonts/opensans16.h>
 #include <fonts/opensans24.h>
+
+#include <BH1750FVI.h>                      // https://github.com/RobTillaart/BH1750FVI_RT
+#include <Adafruit_BMP280.h>                // https://github.com/adafruit/Adafruit_BMP280_Library
+#include <SensirionI2CScd4x.h>              // https://github.com/Sensirion/arduino-i2c-scd4x
 
 #include <SolarCalculator.h>                // https://github.com/jpb10/SolarCalculator
 #include <ArduinoJson.h>                    // https://github.com/bblanchon/ArduinoJson
@@ -57,11 +64,13 @@ void setup() {
   setupDiagramm();
 
   setupBH1750();
+  setupSCD41();
+  setupBMP280();
 }
 
 //-----------------------------------------------------------------------------------------------
 void loop() {
-  loopMessung();
+  loopMessungen();
   loopLukeHeapMonitor();
   loopFakeMessung();
   loopWiFi();

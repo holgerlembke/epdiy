@@ -3,7 +3,7 @@
 
   This will scan the I2C-Bus the Arduino-Way with use of esp_ic2_suspend()/esp_i2c_resum()
 
-  Notice the difference: this time *with* epdiy running.
+  Notice the difference to Version A: this time *with* epdiy running.
 
   ReadTheDocs: https://epdiy.readthedocs.io/en/latest/api.html#highlevel-api
 

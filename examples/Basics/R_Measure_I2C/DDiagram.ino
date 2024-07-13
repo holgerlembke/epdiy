@@ -164,10 +164,13 @@ void drawDiagram(int yofs, datacontainer& data, int normalize /**/) {  // do not
 
 //*********************************************************************************************************************
 void drawscreen() {
+  // Langzeit-Diagramm
   drawDiagram(0 * diagramheight, temp, 2);
   drawDiagram(1 * diagramheight, pressure, 10);
   drawDiagram(2 * diagramheight, humidity, 5);
   drawDiagram(3 * diagramheight, co2, 100);
+
+  // Kurzzeit-Diagramm?
 
   epaperUpdateDisplay();
 }

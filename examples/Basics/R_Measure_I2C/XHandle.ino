@@ -14,17 +14,6 @@ void setupTime() {
 }
 
 //*********************************************************************************************************************
-inline void loopMessung() {
-  const uint32_t timeframe = 2l * 60l * 1000l;
-  static uint32_t ticker = -timeframe;
-
-  if (millis() - ticker >= timeframe) {
-    ticker = millis();
-    drawscreen();
-  }
-}
-
-//*********************************************************************************************************************
 inline void loopFakeMessung() {
   const uint32_t timeframe = 1000l;
   static uint32_t ticker = -timeframe;
