@@ -1,40 +1,7 @@
 //*********************************************************************************************************************
-void GetLongLatForCity() {
-  if (latitude < -500.0) {
-    String uri = OpenweatherMapLocationURI;
-
-    uri.replace("%1%", privatedata_openweatherapikey);
-    uri.replace("%2%", City + "," + Country);
-
-    String res = GetHTMLFromURL(uri);
-    // Serial.println(res);
-
-    StaticJsonDocument<768> doc;
-
-    DeserializationError error = deserializeJson(doc, res);
-
-    if (error) {
-      Serial.print(F("GetLongLatForCity: deserializeJson() failed: "));
-      Serial.println(error.c_str());
-      return;
-    }
-
-    latitude = doc[0]["lat"];
-    longitude = doc[0]["lon"];
-
-    /** /
-    Serial.print("Lat: ");
-    Serial.print(latitude, 6);
-    Serial.print(" Long: ");
-    Serial.println(longitude, 6);
-    /**/
-  }
-}
-
-//*********************************************************************************************************************
 // https://arduino.stackexchange.com/questions/30348/format-hour-and-minute-integers-to-hhmm-format-char
-String hmtoString(int hour, int min) {
-  static char timestr[] = "--:--\0";
+String hmtoString(uint8_t hour, uint8_t min) {
+  char timestr[] = "--:--\0";
   timestr[0] = '0' + hour / 10;
   timestr[1] = '0' + hour % 10;
   timestr[3] = '0' + min / 10;
@@ -59,26 +26,7 @@ String hmtoString(double timepnt) {
 }
 
 //*********************************************************************************************************************
-void SonnenFensterMaler(bool suf, int dx, int dy, int w, int h, String s1, String s2) {
-  /*
-  const int tofs = 6;
-
-  gfx->fillRect(dx + 0 + 1, dy + 0 + 1, w - 2, h * 2 - 2, BLACK);
-  gfx->drawRoundRect(dx + 0, dy + 0, w, h * 2, 2, WHITE);
-
-  drawBMP("/sonnenuntergang.bmp", dx + 1, dy + (!suf) * (h - 1) + 4);
-  drawBMP("/sonnenaufgang.bmp", dx + 1, dy + (suf) * (h - 1) + 4);
-
-  gfx->setCursor(dx + 0 + 32, dy + h - tofs);
-  gfx->print(s1);
-  gfx->setCursor(dx + 0 + 32, dy + 2 * h - tofs);
-  gfx->print(s2);
-  */
-}
-
-//*********************************************************************************************************************
-void SonnenFenster(int dx, int dy) {
-  GetLongLatForCity();
+String SonnenAufgangUntergang() {
 
   struct tm localtimeinfoheute;
   if (getLocalTime(&localtimeinfoheute)) {
@@ -117,10 +65,10 @@ void SonnenFenster(int dx, int dy) {
     const int8_t hofs = 10;
 
 
-//    gfx->setFont(&FreeMono18pt7b);
-//    gfx->setTextColor(WHITE);
+    //    gfx->setFont(&FreeMono18pt7b);
+    //    gfx->setTextColor(WHITE);
     if (h == 0) {
-//      gfx->getTextBounds("88:88", 0, 0, &x1, &y1, &w, &h);
+      //      gfx->getTextBounds("88:88", 0, 0, &x1, &y1, &w, &h);
       /** /
           Serial.print("x1: ");
           Serial.print(x1);
@@ -215,24 +163,13 @@ sonnenaufgangmorgen diff: 100145
 
     if (sonnenuntergangzuerst) {
       // Sonnenuntergang + Sonnenaufgang
-      String st = hmtoString(sunsetheute + timezone);
-      if (st != lasttime) {
-        lasttime = st;
-        // vor Sonnenuntergang:  heute Sonnenuntergang, morgen Sonnenaufgang
-        // Serial.println("A");
-        SonnenFensterMaler(true, dx, dy, w, h, st, hmtoString(sunrisemorgen + timezone));
-      }
+      return "v" + hmtoString(sunsetheute + timezone) + " ^" + hmtoString(sunrisemorgen + timezone);
     } else {
       // Sonnenaufgang + Sonnenuntergang
-      String st = hmtoString(sunrisemorgen + timezone);
-      if (st != lasttime) {
-        lasttime = st;
-        // Nach Sonnenuntergang: morgen Sonnenaufgang, morgen Sonnenuntergang
-        // Serial.println("B");
-        SonnenFensterMaler(false, dx, dy, w, h, st, hmtoString(sunsetmorgen + timezone));
-      }
+      return "^" + hmtoString(sunrisemorgen + timezone) + " v" + hmtoString(sunsetmorgen + timezone);
     }
   }
+  return "";
 }
 
 

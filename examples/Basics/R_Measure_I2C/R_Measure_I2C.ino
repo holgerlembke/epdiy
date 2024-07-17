@@ -23,7 +23,7 @@
 
 #include <Wire.h>
 
-#include <privatedata.h>                    // https://github.com/holgerlembke/privatedata
+#include <privatedata.h>  // https://github.com/holgerlembke/privatedata
 
 #include <WiFi.h>
 #include <WiFiMulti.h>
@@ -34,16 +34,17 @@
 #include <driver/i2c.h>
 #include <epdiy.h>
 #include <fonts/firasans_20.h>
-#include <fonts/opensans16.h>
-#include <fonts/opensans24.h>
+#include <fonts/verdana10.h>
+#include <fonts/verdana16.h>
+#include <fonts/verdana24.h>
 
-#include <BH1750FVI.h>                      // https://github.com/RobTillaart/BH1750FVI_RT
-#include <Adafruit_BMP280.h>                // https://github.com/adafruit/Adafruit_BMP280_Library
-#include <SensirionI2CScd4x.h>              // https://github.com/Sensirion/arduino-i2c-scd4x
+#include <BH1750FVI.h>          // https://github.com/RobTillaart/BH1750FVI_RT
+#include <Adafruit_BMP280.h>    // https://github.com/adafruit/Adafruit_BMP280_Library
+#include <SensirionI2CScd4x.h>  // https://github.com/Sensirion/arduino-i2c-scd4x
 
-#include <SolarCalculator.h>                // https://github.com/jpb10/SolarCalculator
-#include <ArduinoJson.h>                    // https://github.com/bblanchon/ArduinoJson
-#include <LinkedList.h>                     // https://github.com/ivanseidel/LinkedList
+#include <SolarCalculator.h>  // https://github.com/jpb10/SolarCalculator
+#include <ArduinoJson.h>      // https://github.com/bblanchon/ArduinoJson
+//#include <LinkedList.h>       // https://github.com/ivanseidel/LinkedList
 
 
 //-----------------------------------------------------------------------------------------------
@@ -55,6 +56,8 @@ void setup() {
   Serial.print(" ");
   Serial.print(__TIME__);
   Serial.println();
+
+  WiFi.enableIPv6(true);
 
   setupFS();
 
@@ -70,10 +73,10 @@ void setup() {
 
 //-----------------------------------------------------------------------------------------------
 void loop() {
+  loopWiFi();
   loopMessungen();
   loopLukeHeapMonitor();
-  loopFakeMessung();
-  loopWiFi();
+  loopNina();
   delay(1);
 }
 

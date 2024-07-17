@@ -23,7 +23,7 @@ void messungBH1750() {
     enableWire();
     messdatencontainer.bh1750lux = sensorBH1750->getLux();
     messdatencontainer.bh1750valid = true;
-    /**/
+    /** /
     Serial.print("BH1750 Brightness: ");
     Serial.print(messdatencontainer.bh1750lux);
     Serial.println(" lux");
@@ -66,7 +66,7 @@ void messungBMP280() {
       messdatencontainer.bmp280temperatur = bmp280->readTemperature();
       messdatencontainer.bmp280pressure = bmp280->readPressure() / 100.0;
       messdatencontainer.bmp280valid = true;
-      /**/
+      /** /
       Serial.print("BMP280 Temperatur: ");
       Serial.print(messdatencontainer.bmp280temperatur);
       Serial.print(" °C Pressure: ");
@@ -149,7 +149,7 @@ void messungSCD4x() {
         } else if (co2 == 0) {
           Serial.println("Good: SCD4x invalid sample detected, skipping.");
         } else {
-          /**/
+          /** /
           Serial.print("SCD4x Co2: ");
           Serial.print(messdatencontainer.scd4xco2, 0);
           Serial.print(" ppm Temperature: ");
@@ -167,10 +167,44 @@ void messungSCD4x() {
 }
 
 //*********************************************************************************************************************
-void loopMessungen() {
-  messungBH1750();
-  messungBMP280();
-  messungSCD4x();
+inline void loopMessungen() {
+  const uint32_t zyklus = 1l * 1000l;  // 1 second
+  static uint32_t ticker = -zyklus;
+  const uint16_t screenredrawzyklus = 5 * 60;  // seconds
+  static uint16_t screenredraw = 0;
+
+  if (millis() - ticker >= zyklus) {
+    ticker = millis();
+
+    messungBH1750();
+    messungBMP280();
+    messungSCD4x();
+
+    if (gottime && messdatencontainer.bh1750valid && messdatencontainer.bmp280valid && messdatencontainer.scd4xvalid) {
+      struct tm ti;
+      if (!getLocalTime(&ti)) {
+        return;
+      }
+
+      uint16_t slot = (ti.tm_min + 60 * ti.tm_hour) / 2;
+      temp.adddatapoint(messdatencontainer.bmp280temperatur, slot);
+      pressure.adddatapoint(messdatencontainer.bmp280pressure, slot);
+      humidity.adddatapoint(messdatencontainer.scd4xhumidity, slot);
+      co2.adddatapoint(messdatencontainer.scd4xco2, slot);
+
+      if (screenredraw == 0) {
+        drawInfoArea();
+        drawscreen();
+        screenredraw = screenredrawzyklus;
+      } else if ((screenredraw % 60) == 0) {
+        drawInfoArea();
+        updateinfoarea();
+        screenredraw--;
+      } else {
+        screenredraw--;
+      }
+    }
+  }
 }
 
 //*********************************************************************************************************************

@@ -16,7 +16,7 @@
 void setup() {
   Serial.begin(115200);
   do { delay(100); } while (!Serial);
-  Serial.print("\nepdiy Text in Rectangle ");
+  Serial.print("\nepdiy Text in Rectangle 2 ");
   Serial.print(__DATE__);
   Serial.print(" ");
   Serial.print(__TIME__);

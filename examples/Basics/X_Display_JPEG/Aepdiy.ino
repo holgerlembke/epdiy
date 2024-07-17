@@ -4,6 +4,12 @@
 #define dark 0xAA
 #define light 0x55
 
+ *  So keep in mind, when passing a color to any function, to always set the upper 4 bits, otherwise
+ * the color would be black.
+ *
+ *  Possible colors are `0xF0` (white) through `0x80` (median gray) til `0x00` (black).
+ * 
+
 // I like to put global variables into struct to keep it together
 struct epdiydata_t {
   uint16_t screenwidth = 0;

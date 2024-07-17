@@ -17,6 +17,11 @@ const int valuepoints = 720;
 const int diagramheight = 820 / 4 + 1;
 const float minvalue = -1000.0;
 
+const EpdFont* fontl = &Verdana24;
+const EpdFont* fonts = &Verdana16;
+const EpdFont* fontNl = &Verdana16;
+const EpdFont* fontNs = &Verdana10;
+
 //*********************************************************************************************************************
 class datacontainer {
 public:
@@ -62,17 +67,14 @@ public:
   }
 
   //--------------------------------------------
-  void adddatapoint(float datum) {  // first datum is the baseline
+  void adddatapoint(float datum, uint16_t dptime) {  // first datum is the baseline
     if (!valid) {
       for (int i = 0; i < valuepoints; i++) {
         value[i] = datum;
       }
       valid = true;
     } else {
-      value[idx++] = datum;
-      if (idx >= valuepoints) {
-        idx = 0;
-      }
+      value[dptime] = datum;
     }
   }
 };
@@ -124,41 +126,44 @@ void drawDiagram(int yofs, datacontainer& data, int normalize /**/) {  // do not
     // white line to make space
     epd_draw_line(i + 1, yofs + 1, i + 1, yofs + diagramheight - 2, white, epdiydata.epaperFrameBuffer);
 
+    const uint8_t griddy = 3;
+
     int y = diagramheight - 1 - (data.value[i] - data.min) / (data.max - data.min) * (diagramheight - 2);
-    epd_draw_line(i + 1, yofs + diagramheight - 1, i + 1, y + yofs, black, epdiydata.epaperFrameBuffer);
+    epd_draw_line(i + 1, y + yofs + 2, i + 1, y + yofs, black, epdiydata.epaperFrameBuffer);
+    for (uint16_t ys = y + yofs + 2 + (i % griddy); ys < yofs + diagramheight; ys += griddy) {
+      epd_draw_pixel(i + 1, ys, black, epdiydata.epaperFrameBuffer);
+    }
   }
 
   EpdFontProperties font_props = epd_font_properties_default();
   {
-    const EpdFont* font = &OpenSans24;
     // Diagram title
-    EpdRect r = epd_get_string_rect(font, data.title.c_str(), 0, 0, 0, &font_props);
+    EpdRect r = epd_get_string_rect(fontl, data.title.c_str(), 0, 0, 0, &font_props);
     r.x = valuepoints - 1 - r.width;
     r.y = yofs + 1;
     // clear background
     epd_fill_rect(r, white, epdiydata.epaperFrameBuffer);
-    r.y += font->advance_y + font->descender;
-    epd_write_string(font, data.title.c_str(), &r.x, &r.y, epdiydata.epaperFrameBuffer, &font_props);
+    r.y += fontl->advance_y + fontl->descender;
+    epd_write_string(fontl, data.title.c_str(), &r.x, &r.y, epdiydata.epaperFrameBuffer, &font_props);
   }
 
   {
-    const EpdFont* font = &OpenSans16;
     // upper/lower limits
     String limit = String(data.max, (unsigned int)data.digits);
-    EpdRect r = epd_get_string_rect(font, limit.c_str(), 0, 0, 0, &font_props);
+    EpdRect r = epd_get_string_rect(fonts, limit.c_str(), 0, 0, 0, &font_props);
     r.x = valuepoints + 2;
     r.y = yofs;
     epd_fill_rect(r, white, epdiydata.epaperFrameBuffer);
-    r.y += font->advance_y + font->descender;
-    epd_write_string(font, limit.c_str(), &r.x, &r.y, epdiydata.epaperFrameBuffer, &font_props);
+    r.y += fonts->advance_y + fonts->descender;
+    epd_write_string(fonts, limit.c_str(), &r.x, &r.y, epdiydata.epaperFrameBuffer, &font_props);
 
     limit = String(data.min, (unsigned int)data.digits);
-    r = epd_get_string_rect(font, limit.c_str(), 0, 0, 0, &font_props);
+    r = epd_get_string_rect(fonts, limit.c_str(), 0, 0, 0, &font_props);
     r.x = valuepoints + 2;
-    r.y = yofs + diagramheight - 1 - font->advance_y - font->descender;
+    r.y = yofs + diagramheight - 1 - fonts->advance_y - fonts->descender;
     epd_fill_rect(r, white, epdiydata.epaperFrameBuffer);
-    r.y += font->advance_y + font->descender;
-    epd_write_string(font, limit.c_str(), &r.x, &r.y, epdiydata.epaperFrameBuffer, &font_props);
+    r.y += fonts->advance_y + fonts->descender;
+    epd_write_string(fonts, limit.c_str(), &r.x, &r.y, epdiydata.epaperFrameBuffer, &font_props);
   }
 }
 
@@ -173,13 +178,124 @@ void drawscreen() {
   // Kurzzeit-Diagramm?
 
   epaperUpdateDisplay();
+
+  Serial.println("Full update done.");
+}
+
+//*********************************************************************************************************************
+EpdRect InfoAreaRect() {
+  int xofs = valuepoints + 100;
+  return makeEpdRect(xofs, 0, epdiydata.screenwidth - xofs, epdiydata.screenheight);
+}
+
+//*********************************************************************************************************************
+void drawPart(String s1, String s2, uint16_t xpos, uint16_t ypos) {
+  EpdFontProperties font_props = epd_font_properties_default();
+  EpdRect rt = epd_get_string_rect(fontl, s1.c_str(), 0, 0, 0, &font_props);
+  rt.x = xpos;
+  rt.y = ypos;
+  epd_write_string(fontl, s1.c_str(), &rt.x, &rt.y, epdiydata.epaperFrameBuffer, &font_props);
+  rt.x = xpos + rt.width + 10;
+  rt.y = ypos;
+  epd_write_string(fonts, s2.c_str(), &rt.x, &rt.y, epdiydata.epaperFrameBuffer, &font_props);
+}
+
+//*********************************************************************************************************************
+void drawInfoAreaMessdaten(uint16_t xofs, uint16_t yofs) {
+  EpdFontProperties font_props = epd_font_properties_default();
+
+  // fetch height
+  EpdRect baser = epd_get_string_rect(fontl, "xyT", 0, 0, 0, &font_props);
+
+  int xpos = xofs;
+  int ypos = baser.height + 2 + yofs;
+
+  const uint8_t dd = 12;
+  drawPart(String(messdatencontainer.bmp280temperatur, 1), temp.title, xpos, ypos);
+  ypos += baser.height - dd;
+  drawPart(String(messdatencontainer.bmp280pressure, 0), pressure.title, xpos, ypos);
+  ypos += baser.height - dd;
+  drawPart(String(messdatencontainer.scd4xhumidity, 0), humidity.title, xpos, ypos);
+  ypos += baser.height - dd;
+  drawPart(String(messdatencontainer.scd4xco2, 0), co2.title, xpos, ypos);
+  ypos += baser.height - dd;
+  drawPart(String(messdatencontainer.bh1750lux, 2), "lux", xpos, ypos);
+
+  Serial.println("Infoarea Messdaten update done.");
+}
+
+//*********************************************************************************************************************
+void drawInfoAreaTime(uint16_t xofs, uint16_t yofs) {
+  const String days[] = { "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" };
+  struct tm ti;
+  if (!getLocalTime(&ti)) {
+    return;
+  }
+
+  EpdFontProperties font_props = epd_font_properties_default();
+  // fetch height
+  EpdRect baser = epd_get_string_rect(fontl, "xyT", 0, 0, 0, &font_props);
+  int xpos = xofs;
+  int ypos = baser.height + 2 + yofs;
+
+  String s = hmtoString(ti.tm_hour, ti.tm_min);
+  epd_write_string(fontl, s.c_str(), &xpos, &ypos, epdiydata.epaperFrameBuffer, &font_props);
+
+  baser = epd_get_string_rect(fonts, "xyT", 0, 0, 0, &font_props);
+  xpos = xofs;
+  ypos -= baser.height - 10;
+  s = days[ti.tm_wday] + " ";
+  s += String(ti.tm_mday) + ".";
+  s += String(ti.tm_mon + 1) + ".";
+  s += String(ti.tm_year + 1900);
+  epd_write_string(fonts, s.c_str(), &xpos, &ypos, epdiydata.epaperFrameBuffer, &font_props);
+
+  s = SonnenAufgangUntergang();
+  xpos = xofs;
+  ypos -= 11;
+  epd_write_string(fonts, s.c_str(), &xpos, &ypos, epdiydata.epaperFrameBuffer, &font_props);
+}
+
+//*********************************************************************************************************************
+void drawNinaNachrichten(uint16_t xofs, uint16_t yofs) {
+  if (NinaList) {
+
+    EpdFontProperties font_props = epd_font_properties_default();
+    // fetch height
+    EpdRect baser = epd_get_string_rect(fontNl, "xyT", 0, 0, 0, &font_props);
+    int xpos = xofs;
+    int ypos = baser.height + 2 + yofs;
+
+    String s = NinaList[0];
+    epd_TextWrap(fontNl, s.c_str(), xpos, ypos, epdiydata.screenwidth-xofs, epdiydata.epaperFrameBuffer, &font_props);
+
+  }
+}
+
+//*********************************************************************************************************************
+void drawInfoArea() {
+  EpdRect area = InfoAreaRect();
+  // Bereich weiß anmalen
+  epd_fill_rect(area, white, epdiydata.epaperFrameBuffer);
+
+  drawInfoAreaTime(area.x, 0);
+  drawInfoAreaMessdaten(area.x, 150);
+  drawNinaNachrichten(area.x, 430);
+}
+
+//*********************************************************************************************************************
+void updateinfoarea() {
+  epd_poweron();
+  int temperature = epd_ambient_temperature();
+  EpdDrawError err = epd_hl_update_area(&epdiydata.hl, MODE_DU, temperature, InfoAreaRect());
+  epd_poweroff();
 }
 
 //*********************************************************************************************************************
 void setupDiagramm() {
-  temp.title = "° C";
+  temp.title = "°C";
   pressure.title = "hPa";
-  humidity.title = "%";
+  humidity.title = "%RH";
   co2.title = "ppm";
 
   //??

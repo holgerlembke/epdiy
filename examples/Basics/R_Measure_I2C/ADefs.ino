@@ -2,15 +2,13 @@
 const uint8_t PinI2CSCL = 40;
 const uint8_t PinI2CSDA = 39;
 
+double latitude = 52.2689;
+double longitude = 10.5268;
+                               // 03101000
+const String regionalschuessel = "031010000000";                                          //"091620000000"; // "031010000000";
+const String ninaapiURL = "https://nina.api.proxy.bund.dev/api31/dashboard/%1%.json";     // %1%: Gemeindeschlüssel
 
-const String City = "Braunschweig";
-const String Country = "DE";
-// Location
-double latitude = -1000.0;   // 52.2689;
-double longitude = -1000.0;  // 10.5268;
-
-const String regionalschuessel = "031010000000";                                       //"091620000000"; // "031010000000";
-const String ninaapiURL = "https://nina.api.proxy.bund.dev/api31/dashboard/%1%.json";  // %1%: Gemeindeschlüssel
+const String ninaapiDetailURL = "https://nina.api.proxy.bund.dev/api31/warnings/%1.json"; // %1: MeldungsID
 
 
 // %1% --> apikey
@@ -19,6 +17,8 @@ const String OpenweathermapURI = "http://api.openweathermap.org/data/2.5/forecas
 const String OpenweatherMapLocationURI = "http://api.openweathermap.org/geo/1.0/direct?q=%2%&limit=5&appid=%1%";
 const String OpenweathermapIconPathURI = "http://openweathermap.org/img/wn/%1%.png";
 
+// Habe Zeit erhalten...
+bool gottime = false;
 
 // Container für die Messdaten
 struct messdatencontainer_t {
