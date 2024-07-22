@@ -484,6 +484,17 @@ enum EpdDrawError epd_write_string(
     const EpdFontProperties* properties
 );
 
+/*
+* Writes a long string into a w width area, does a line wrap until all written.
+* Gives back the rect the string uses.
+*/
+EpdRect epd_TextWrap(
+    const EpdFont* font, 
+    const char* string, 
+    int x, int y, int w, 
+    uint8_t* framebuffer, 
+    const EpdFontProperties* properties); // font.c
+
 /**
  * Write a (multi-line) string to the EPD.
  */

@@ -1,15 +1,32 @@
 //*********************************************************************************************************************
+// hier nur die abweichenden Adressen
 const uint8_t bh1750addr = 0x23;
 const uint8_t bmp280addr = 0x76;
+
+//*********************************************************************************************************************
+bool HasDeviceAtI2CAddr(uint8_t addr) {
+  enableWire();
+  Wire.beginTransmission(addr);
+  byte error = Wire.endTransmission();
+  disableWire();
+
+  return (error == 0);
+}
 
 //*********************************************************************************************************************
 BH1750FVI* sensorBH1750 = NULL;
 //*********************************************************************************************************************
 void setupBH1750() {
   enableWire();
-  sensorBH1750 = new BH1750FVI(bh1750addr);
-  sensorBH1750->powerOn();
-  sensorBH1750->setContHighRes();
+  if (HasDeviceAtI2CAddr(bh1750addr)) {
+    sensorBH1750 = new BH1750FVI(bh1750addr);
+    sensorBH1750->powerOn();
+    sensorBH1750->setContHighRes();
+  } else {
+    delete sensorBH1750;
+    sensorBH1750 = NULL;
+    Serial.println("Panic: bh1750 not found.");
+  }
   disableWire();
 }
 
@@ -20,15 +37,17 @@ void messungBH1750() {
 
   if (millis() - ticker >= zyklus) {
     ticker = millis();
-    enableWire();
-    messdatencontainer.bh1750lux = sensorBH1750->getLux();
-    messdatencontainer.bh1750valid = true;
-    /** /
+    if (sensorBH1750) {
+      enableWire();
+      messdatencontainer.bh1750lux = sensorBH1750->getLux();
+      messdatencontainer.bh1750valid = true;
+      /** /
     Serial.print("BH1750 Brightness: ");
     Serial.print(messdatencontainer.bh1750lux);
     Serial.println(" lux");
     /**/
-    disableWire();
+      disableWire();
+    }
   }
 }
 
@@ -167,11 +186,76 @@ void messungSCD4x() {
 }
 
 //*********************************************************************************************************************
-inline void loopMessungen() {
-  const uint32_t zyklus = 1l * 1000l;  // 1 second
+Melopero_APDS9960* apds9960 = NULL;
+//*********************************************************************************************************************
+void setupAPDS9960() {
+  enableWire();
+
+  apds9960 = new Melopero_APDS9960();
+
+  int8_t status = apds9960->initI2C(0x39, Wire);  // Initialize the comunication library
+  if (status != NO_ERROR) {
+    delete apds9960;
+    apds9960 = NULL;
+    Serial.println("Panic: apds9960 not found.");
+  } else {
+    status = apds9960->reset();  // Reset all interrupt settings and power off the device
+    if (status != NO_ERROR) {
+      delete apds9960;
+      apds9960 = NULL;
+      Serial.println("Panic: apds9960 error during reset.");
+    } else {
+      apds9960->enableGesturesEngine();
+      apds9960->setGestureProxEnterThreshold(25);
+      apds9960->setGestureExitThreshold(20);
+      apds9960->setGestureExitPersistence(EXIT_AFTER_4_GESTURE_END);
+      apds9960->wakeUp();
+    }
+  }
+  disableWire();
+}
+
+//*********************************************************************************************************************
+void messungAPDS9960() {
+  const uint32_t zyklus = 1000l;
   static uint32_t ticker = -zyklus;
-  const uint16_t screenredrawzyklus = 5 * 60;  // seconds
-  static uint16_t screenredraw = 0;
+
+  if (millis() - ticker >= zyklus) {
+    ticker = millis();
+
+    if (apds9960) {
+      enableWire();
+      apds9960->updateGestureStatus();
+      if (apds9960->gestureFifoHasData) {
+        Serial.print("+");
+      }
+      disableWire();
+    }
+
+    /*
+    if (apds9960) {
+      uint8_t gesture = apds9960->readGesture();
+      if (gesture == APDS9960_DOWN) {
+        Serial.println("v")
+      } else if (gesture == APDS9960_UP) {
+        Serial.println("^")
+      } else if (gesture == APDS9960_LEFT) {
+        Serial.println("<")
+      } else if (gesture == APDS9960_RIGHT) {
+        Serial.println(">");
+      }
+    }
+*/
+  }
+}
+
+//*********************************************************************************************************************
+//*********************************************************************************************************************
+inline void loopMessungen() {
+  const uint32_t zyklus = 1000l;  // 1 second
+  static uint32_t ticker = -zyklus;
+  const uint16_t diagrammzyklus = 5 * 60;  // seconds
+  static uint16_t sekunden = 0;
 
   if (millis() - ticker >= zyklus) {
     ticker = millis();
@@ -179,6 +263,7 @@ inline void loopMessungen() {
     messungBH1750();
     messungBMP280();
     messungSCD4x();
+    messungAPDS9960();
 
     if (gottime && messdatencontainer.bh1750valid && messdatencontainer.bmp280valid && messdatencontainer.scd4xvalid) {
       struct tm ti;
@@ -192,16 +277,16 @@ inline void loopMessungen() {
       humidity.adddatapoint(messdatencontainer.scd4xhumidity, slot);
       co2.adddatapoint(messdatencontainer.scd4xco2, slot);
 
-      if (screenredraw == 0) {
+      if (sekunden == 0) {
         drawInfoArea();
         drawscreen();
-        screenredraw = screenredrawzyklus;
-      } else if ((screenredraw % 60) == 0) {
+        sekunden = diagrammzyklus;
+      } else if ((sekunden % 60) == 0) {
         drawInfoArea();
         updateinfoarea();
-        screenredraw--;
+        sekunden--;
       } else {
-        screenredraw--;
+        sekunden--;
       }
     }
   }

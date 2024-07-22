@@ -201,6 +201,7 @@ static enum EpdDrawError IRAM_ATTR draw_char(
         free((uint8_t*)bitmap);
     }
     *cursor_x += glyph->advance_x;
+
     return EPD_DRAW_SUCCESS;
 }
 
@@ -208,7 +209,7 @@ static enum EpdDrawError IRAM_ATTR draw_char(
  * @brief Calculate the bounds of a character when drawn at (x, y), move the
  * cursor (*x) forward, adjust the given bounds.
  */
-static void get_char_bounds(
+static enum EpdDrawError get_char_bounds(
     const EpdFont* font,
     uint32_t cp,
     int* x,
@@ -223,12 +224,13 @@ static void get_char_bounds(
 
     const EpdGlyph* glyph = epd_get_glyph(font, cp);
 
+    // das klappt nicht, weil in epd_get_text_bounds eine while-schleife ohne abruch war...
     if (!glyph) {
         glyph = epd_get_glyph(font, props->fallback_glyph);
     }
 
     if (!glyph) {
-        return;
+        return EPD_DRAW_GLYPH_FALLBACK_FAILED;
     }
 
     int x1 = *x + glyph->left, y1 = *y + glyph->top - glyph->height, x2 = x1 + glyph->width,
@@ -251,6 +253,8 @@ static void get_char_bounds(
             *maxy = y2;
     }
     *x += glyph->advance_x;
+
+    return EPD_DRAW_SUCCESS;
 }
 
 EpdRect epd_get_string_rect(
@@ -273,13 +277,14 @@ EpdRect epd_get_string_rect(
 
     // Go through each line and get it's co-ordinates
     uint32_t c;
-    while ((c = next_cp((const uint8_t**)&string))) {
+    enum EpdDrawError err = EPD_DRAW_SUCCESS;
+    while ((err == EPD_DRAW_SUCCESS) && ((c = next_cp((const uint8_t**)&string)))) {
         if (c == 0x000A)  // newline
         {
             temp_x = x;
             temp_y += font->advance_y;
         } else
-            get_char_bounds(font, c, &temp_x, &temp_y, &minx, &miny, &maxx, &maxy, &props);
+            err |=get_char_bounds(font, c, &temp_x, &temp_y, &minx, &miny, &maxx, &maxy, &props);
     }
     temp.width = maxx - x + (margin * 2);
     temp.height = maxy - miny + (margin * 2);
@@ -314,8 +319,10 @@ void epd_get_text_bounds(
     int temp_x = *x;
     int temp_y = *y;
     uint32_t c;
-    while ((c = next_cp((const uint8_t**)&string))) {
-        get_char_bounds(font, c, &temp_x, &temp_y, &minx, &miny, &maxx, &maxy, &props);
+
+    enum EpdDrawError err = EPD_DRAW_SUCCESS;
+    while ((err == EPD_DRAW_SUCCESS) && ((c = next_cp((const uint8_t**)&string)))) {
+        err |= get_char_bounds(font, c, &temp_x, &temp_y, &minx, &miny, &maxx, &maxy, &props);
     }
     *x1 = min(original_x, minx);
     *w = maxx - *x1;
@@ -388,8 +395,9 @@ static enum EpdDrawError epd_write_line(
             epd_draw_hline(local_cursor_x, l, w, bg << 4, buffer);
         }
     }
+
     enum EpdDrawError err = EPD_DRAW_SUCCESS;
-    while ((c = next_cp((const uint8_t**)&string))) {
+    while ((err == EPD_DRAW_SUCCESS) && ((c = next_cp((const uint8_t**)&string)))) {
         err |= draw_char(font, buffer, &local_cursor_x, local_cursor_y, c, &props);
     }
 
@@ -413,11 +421,13 @@ enum EpdDrawError epd_write_string(
     uint8_t* framebuffer,
     const EpdFontProperties* properties
 ) {
+
     char *token, *newstring, *tofree;
     if (string == NULL) {
         ESP_LOGE("font.c", "cannot draw a NULL string!");
         return EPD_DRAW_STRING_INVALID;
     }
+
     tofree = newstring = strdup(string);
     if (newstring == NULL) {
         ESP_LOGE("font.c", "cannot allocate string copy!");
@@ -435,4 +445,40 @@ enum EpdDrawError epd_write_string(
 
     free(tofree);
     return err;
+}
+
+
+EpdRect epd_TextWrap(const EpdFont* font, const char* string, int x, int y, int w, uint8_t* framebuffer, const EpdFontProperties* properties) {
+  y += font->advance_y + font->descender;
+
+  EpdRect r;
+  r.x = x;
+  r.y = y;
+
+  char s[] = " ";  // single char+\0
+
+  const char* t = string;
+  int xx = x;
+  int yy = y;
+  int sw = x + w;
+  while (*t) {
+    s[0] = *t++;
+    EpdRect rr = epd_get_string_rect(font, s, xx, yy, 0, properties);
+    if (xx + rr.width > sw) {
+      // führende leerschritte nach Zeilenumbruch überspringen. Wenn also ein Leerschritt am Ende umgebrochen werden muss, einfach weitermachen
+      if (s[0] == ' ') {
+        continue;
+      }
+      xx = x;
+      y += rr.height;
+      yy = y;
+    }
+    epd_write_string(font, s, &xx, &yy, framebuffer, properties);
+    yy = y;
+  }
+  r.height = yy - r.y + font->advance_y;
+  r.width = w;
+  r.y -= (font->advance_y + font->descender);
+
+  return r;
 }

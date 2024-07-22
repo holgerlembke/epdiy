@@ -11,7 +11,12 @@ inline void loopLukeHeapMonitor() {
 }
 
 //*********************************************************************************************************************
-void meminfo(void) {  // esp32
+uint32_t absu(uint32_t a, uint32_t b) {
+  return (a > b) ? a - b : b - a;
+}
+
+//*********************************************************************************************************************
+inline void meminfo(void) {  // esp32
   static uint32_t lastRAMfreeheap = 0;
   static uint32_t lastRAMgetMaxAllocHeap = 0;
   static uint32_t lastPSRAMfreeheap = 0;
@@ -23,7 +28,13 @@ void meminfo(void) {  // esp32
   uint32_t t3 = ESP.getFreePsram();
   uint32_t t4 = ESP.getMaxAllocPsram();
 
-  if ((t1 != lastRAMfreeheap) || (t2 != lastRAMgetMaxAllocHeap) || (t3 != lastPSRAMfreeheap) || (t4 != lastPSRAMgetMaxAllocHeap)) {
+  const uint32_t reportlimit = 1000;
+
+  if ((absu(t1, lastRAMfreeheap) > reportlimit) ||         //
+      (absu(t2, lastRAMgetMaxAllocHeap) > reportlimit) ||  //
+      (absu(t3, lastPSRAMfreeheap) > reportlimit) ||       //
+      (absu(t4, lastPSRAMgetMaxAllocHeap) > reportlimit)   //
+  ) {
     lastRAMfreeheap = t1;
     lastRAMgetMaxAllocHeap = t2;
     lastPSRAMfreeheap = t3;

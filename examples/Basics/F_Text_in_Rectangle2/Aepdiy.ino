@@ -89,6 +89,9 @@ EpdRect epd_TextWrap(
   int w,
   uint8_t* framebuffer,
   const EpdFontProperties* properties) {
+
+  y += font->advance_y+font->descender;
+
   // (int x, int y, int w, char* text, const EpdFont* font)
   EpdRect r;
   r.x = x;
@@ -111,8 +114,9 @@ EpdRect epd_TextWrap(
     epd_write_string(font, s, &xx, &yy, framebuffer, properties);
     yy = y;
   }
-  r.height = y - r.y;
+  r.height = yy - r.y + font->advance_y;
   r.width = w;
+  r.y -= (font->advance_y + font->descender);
 
   return r;
 }

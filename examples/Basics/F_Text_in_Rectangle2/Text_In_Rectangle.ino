@@ -33,7 +33,8 @@ void TextWrapHlpr(int x, int y, int w, char* text) {
   const EpdFont* font = &FiraSans_20;
   EpdFontProperties font_props = epd_font_properties_default();
 
-  epd_TextWrap(font, text, x, y, w, epdiydata.epaperFrameBuffer, &font_props);
+  EpdRect r = epd_TextWrap(font, text, x, y, w, epdiydata.epaperFrameBuffer, &font_props);
+  epd_draw_rect(r, 0, epdiydata.epaperFrameBuffer);
 }
 
 //*********************************************************************************************************************
@@ -43,7 +44,7 @@ void Text_In_Rectangle() {
   Text_In_Rectangle_Hlpr(100, 300, "TyhoglyT");
 
   Text_In_Rectangle_Hlpr(1000, 400, "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
-  TextWrapHlpr(500, 500, epdiydata.screenwidth - 900, "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
+  TextWrapHlpr(500, 500, epdiydata.screenwidth - 900, "abc def ghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
 
   epaperUpdateDisplay();
 }

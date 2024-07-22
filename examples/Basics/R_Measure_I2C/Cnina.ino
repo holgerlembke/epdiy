@@ -44,8 +44,6 @@ String RequestWarnmeldungen(String gs) {
 
 //*********************************************************************************************************************
 int NinaListLength = -1;
-int NinaListScrollIdx;
-uint8_t NinaRepaintNeededState = 2;
 String* NinaList = NULL;        // new String[n];
 const uint8_t NinaListIPI = 4;  // ListItemsPerIncident
 /* 
@@ -61,13 +59,32 @@ void Ninatesterdata() {
   NinaList = new String[NinaListLength * NinaListIPI];
 
   for (int i = 0; i < NinaListLength; i++) {
-    NinaList[i * 3 + 0] = "DWD: TEST " + String(i) + " Amtliche WARNUNG vor STURMBOEEN";
-    NinaList[i * 3 + 1] = "Beginn: 2023-08-07 10:00:00";
-    NinaList[i * 3 + 2] = "Ende: 2023-08-07 21:00:00";
+    NinaList[i * NinaListIPI + 0] = "DWD: TEST " + String(i) + " Amtliche WARNUNG vor STURMBOEEN";
+    NinaList[i * NinaListIPI + 1] = "Beginn: 2023-08-07 10:00:00";
+    NinaList[i * NinaListIPI + 2] = "Ende: 2023-08-07 21:00:00";
+    NinaList[i * NinaListIPI + 3] = "Beschreibung zu dem Event. Beschreibung zu dem Event. Beschreibung zu dem Event. Beschreibung zu dem Event.";
   }
-  NinaListScrollIdx = 0;
 }
 
+/*
+Nina.size(): 1
+NinaDetail: https://nina.api.proxy.bund.dev/api31/warnings/dwd.2.49.0.0.276.0.DWD.PVW.1721573340000.8f86d3c2-72fe-4d15-a5ae-985bf9f5a1d3.MUL.json
+Description: Von Südwesten ziehen Gewitter auf. Dabei gibt es heftigen Starkregen mit Niederschlagsmengen um 40 l/m² pro Stunde sowie Sturmböen mit Geschwindigkeiten um 75 km/h (21 m/s, 41 kn, Bft 9) und Hagel mit Korngrößen um 2 cm.
+
+*/
+
+//*********************************************************************************************************************
+void DeAmtliche() {
+  for (int i = 0; i < NinaListLength; i++) {
+    String s = NinaList[i * NinaListIPI + 0];
+    int idx = s.indexOf("Amtliche ");
+    if (idx>-1) {
+      s.remove(idx,9);
+      NinaList[i * NinaListIPI + 0]=s;
+    }
+  }
+}
+ 
 //*********************************************************************************************************************
 String HandleBeginnEnde(String s) {
   if (s != "null") {
@@ -110,13 +127,11 @@ void NinaWarnmeldungsHandler() {
     delete[] NinaList;
   }
   if (doc.size() == 0) {
-    if (NinaRepaintNeededState == 1) {
-      NinaRepaintNeededState = 2;
-    }
     NinaList = NULL;
     NinaListLength = -1;
+
+    //Ninatesterdata();
   } else {
-    NinaRepaintNeededState = 1;
     NinaListLength = doc.size();
     NinaList = new String[NinaListLength * NinaListIPI];
 
@@ -132,11 +147,12 @@ void NinaWarnmeldungsHandler() {
       Beginn = HandleBeginnEnde(Beginn);
       Ende = HandleBeginnEnde(Ende);
 
-      NinaList[i * 3 + 0] = provider + ": " + msg;
-      NinaList[i * 3 + 1] = (Beginn == "") ? "" : "Beginn: " + Beginn;
-      NinaList[i * 3 + 2] = (Ende == "") ? "" : "Ende: " + Ende;
+      NinaList[i * NinaListIPI + 0] = provider + ": " + msg;
+      NinaList[i * NinaListIPI + 1] = (Beginn == "") ? "" : "Beginn: " + Beginn;
+      NinaList[i * NinaListIPI + 2] = (Ende == "") ? "" : "Ende: " + Ende;
+      NinaList[i * NinaListIPI + 3] = "";
 
-      /**/
+      /** /
       Serial.print("id: ");
       Serial.println(id);
       Serial.print("Msg: ");
@@ -151,6 +167,7 @@ void NinaWarnmeldungsHandler() {
 
       NinaWarnmeldungsHandlerDetails(id, i * 3);
     }
+    DeAmtliche();
   }
 }
 
@@ -181,10 +198,6 @@ void NinaWarnmeldungsHandlerDetails(String id, int NinaListIdx) {
   Serial.println(NinaList[NinaListIdx + 3]);
   /**/
 }
-
-
-
-
 
 //*********************************************************************************************************************
 void loopNina() {

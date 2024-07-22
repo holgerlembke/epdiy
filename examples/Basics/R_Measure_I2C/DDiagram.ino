@@ -20,6 +20,7 @@ const float minvalue = -1000.0;
 const EpdFont* fontl = &Verdana24;
 const EpdFont* fonts = &Verdana16;
 const EpdFont* fontNl = &Verdana16;
+const EpdFont* fontNm = &Verdana12;
 const EpdFont* fontNs = &Verdana10;
 
 //*********************************************************************************************************************
@@ -258,7 +259,12 @@ void drawInfoAreaTime(uint16_t xofs, uint16_t yofs) {
 
 //*********************************************************************************************************************
 void drawNinaNachrichten(uint16_t xofs, uint16_t yofs) {
+  static int NinaListScrollIdx = 0;
+
+  Serial.println("start draw nina info.");
+
   if (NinaList) {
+    int idx = NinaListScrollIdx * NinaListIPI;
 
     EpdFontProperties font_props = epd_font_properties_default();
     // fetch height
@@ -266,10 +272,27 @@ void drawNinaNachrichten(uint16_t xofs, uint16_t yofs) {
     int xpos = xofs;
     int ypos = baser.height + 2 + yofs;
 
-    String s = NinaList[0];
-    epd_TextWrap(fontNl, s.c_str(), xpos, ypos, epdiydata.screenwidth-xofs, epdiydata.epaperFrameBuffer, &font_props);
+    EpdRect r = epd_TextWrap(fontNl, NinaList[idx + 0].c_str(), xpos, ypos, epdiydata.screenwidth - xofs, epdiydata.epaperFrameBuffer, &font_props);
+    ypos += r.height;
+    if (NinaList[1] != "") {
+      r = epd_TextWrap(fontNs, NinaList[idx + 1].c_str(), xpos, ypos, epdiydata.screenwidth - xofs, epdiydata.epaperFrameBuffer, &font_props);
+      ypos += r.height;
+    }
+    if (NinaList[2] != "") {
+      r = epd_TextWrap(fontNs, NinaList[idx + 2].c_str(), xpos, ypos, epdiydata.screenwidth - xofs, epdiydata.epaperFrameBuffer, &font_props);
+      ypos += r.height;
+    }
+    r = epd_TextWrap(fontNm, NinaList[idx + 3].c_str(), xpos, ypos, epdiydata.screenwidth - xofs, epdiydata.epaperFrameBuffer, &font_props);
 
+    NinaListScrollIdx++;
+    if (NinaListScrollIdx >= NinaListLength) {
+      NinaListScrollIdx = 0;
+    }
+  } else {
+    NinaListScrollIdx = 0;
   }
+
+  Serial.println("draw nina info done.");
 }
 
 //*********************************************************************************************************************
@@ -279,8 +302,8 @@ void drawInfoArea() {
   epd_fill_rect(area, white, epdiydata.epaperFrameBuffer);
 
   drawInfoAreaTime(area.x, 0);
-  drawInfoAreaMessdaten(area.x, 150);
-  drawNinaNachrichten(area.x, 430);
+  drawInfoAreaMessdaten(area.x, 130);
+  drawNinaNachrichten(area.x, 360);
 }
 
 //*********************************************************************************************************************
@@ -301,6 +324,41 @@ void setupDiagramm() {
   //??
 }
 
+//*********************************************************************************************************************
+// debug.
+EpdRect epd_TextWrap2(const EpdFont* font, const char* string, int x, int y, int w, uint8_t* framebuffer, const EpdFontProperties* properties) {
+  y += font->advance_y + font->descender;
 
+  EpdRect r;
+  r.x = x;
+  r.y = y;
+
+  char s[] = " ";  // single char+\0
+
+  const char* t = string;
+  int xx = x;
+  int yy = y;
+  int sw = x + w;
+  while (*t) {
+    s[0] = *t++;
+    EpdRect rr = epd_get_string_rect(font, s, xx, yy, 0, properties);
+    if (xx + rr.width > sw) {
+      // führende leerschritte nach Zeilenumbruch überspringen. Wenn also ein Leerschritt am Ende umgebrochen werden muss, einfach weitermachen
+      if (s[0] == ' ') {
+        continue;
+      }
+      xx = x;
+      y += rr.height;
+      yy = y;
+    }
+    epd_write_string(font, s, &xx, &yy, framebuffer, properties);
+    yy = y;
+  }
+  r.height = yy - r.y + font->advance_y;
+  r.width = w;
+  r.y -= (font->advance_y + font->descender);
+
+  return r;
+}
 
 //

@@ -76,34 +76,6 @@ void epaperUpdateDisplay() {
   epd_poweroff();
 }
 
-//*********************************************************************************************************************
-EpdRect epd_TextWrap(const EpdFont* font, const char* string, int x, int y, int w, uint8_t* framebuffer, const EpdFontProperties* properties) {
-  EpdRect r;
-  r.x = x;
-  r.y = y;
-
-  char s[] = " ";  // single char+\0
-
-  const char* t = string;
-  int xx = x;
-  int yy = y;
-  int sw = x + w;
-  while (*t) {
-    s[0] = *t++;
-    EpdRect rr = epd_get_string_rect(font, s, xx, yy, 0, properties);
-    if (xx + rr.width > sw) {
-      xx = x;
-      y += rr.height;
-      yy = y;
-    }
-    epd_write_string(font, s, &xx, &yy, framebuffer, properties);
-    yy = y;
-  }
-  r.height = y - r.y;
-  r.width = w;
-
-  return r;
-}
 
 
 //

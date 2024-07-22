@@ -12,6 +12,7 @@
   I2C devices
      0x20  --> PCA9535        port extender, do not mess with P1x
      0x23  --> BH1750
+     0x39  --> APDS9960       gesture sensor
      0x51  --> PCF8563T       rtc
      0x62  --> SCD41          temp+hum+co2
      0x68  --> TPS651851RSLR  normally off, so does not show in scan
@@ -35,15 +36,17 @@
 #include <epdiy.h>
 #include <fonts/firasans_20.h>
 #include <fonts/verdana10.h>
+#include <fonts/verdana12.h>
 #include <fonts/verdana16.h>
 #include <fonts/verdana24.h>
 
 #include <BH1750FVI.h>          // https://github.com/RobTillaart/BH1750FVI_RT
 #include <Adafruit_BMP280.h>    // https://github.com/adafruit/Adafruit_BMP280_Library
 #include <SensirionI2CScd4x.h>  // https://github.com/Sensirion/arduino-i2c-scd4x
+#include <Melopero_APDS9960.h>  // https://github.com/melopero/Melopero_APDS-9960_Arduino_Library
 
-#include <SolarCalculator.h>  // https://github.com/jpb10/SolarCalculator
-#include <ArduinoJson.h>      // https://github.com/bblanchon/ArduinoJson
+#include <SolarCalculator.h>    // https://github.com/jpb10/SolarCalculator
+#include <ArduinoJson.h>        // https://github.com/bblanchon/ArduinoJson
 //#include <LinkedList.h>       // https://github.com/ivanseidel/LinkedList
 
 
@@ -69,6 +72,7 @@ void setup() {
   setupBH1750();
   setupSCD41();
   setupBMP280();
+  setupAPDS9960();
 }
 
 //-----------------------------------------------------------------------------------------------
